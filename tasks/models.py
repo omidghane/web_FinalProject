@@ -18,9 +18,9 @@ class Task(models.Model):
     estimated_time = models.IntegerField(blank=True, null=True)
     actual_time = models.IntegerField(blank=True, null=True)
     due_date = models.DateField(blank=True, null=True)
-    priority = models.CharField(max_length=50)
-    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE)
-    assignee = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    priority = models.CharField(max_length=50) #
+    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE) #
+    assignee = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True) #
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     image_url = models.URLField(blank=True, null=True)

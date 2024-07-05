@@ -7,7 +7,7 @@ from rest_framework import status
 from users.auth import Auth
 from .models import SubTask, Task
 from .serializer import SubTaskSerailizer, TaskSerailizer
-from workspaces.models import UserWorkspaceRole
+from workspaces.models import UserWorkspaceRole, Workspace
 
 User = get_user_model()
 

@@ -8,6 +8,7 @@ class WorkspaceSerailizer(ModelSerializer):
     class Meta:
         model = Workspace
         fields = "__all__"
+        # fields = ['id', 'name']
 
 
 class UserWorkspaceRoleSerailizer(ModelSerializer):
