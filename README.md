@@ -1,4 +1,4 @@
 # Trello Project
 
 
-- by `Omid Ghane`
+- by `Omid Ghane` & 'Sara Rouhani"
