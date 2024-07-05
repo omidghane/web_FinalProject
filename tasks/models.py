@@ -1,11 +1,12 @@
 import uuid
 
+from django.contrib.auth import get_user_model
 from django.db import models
 
-from django.contrib.auth import get_user_model
 from workspaces.models import Workspace
 
 User = get_user_model()
+
 
 class Task(models.Model):
     STATUS_CHOICES = [(1, "Planned"), (2, "In Progress"), (3, "Completed")]

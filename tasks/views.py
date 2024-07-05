@@ -1,212 +1,107 @@
-import json
+from django.contrib.auth import get_user_model
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
 
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404
-from django.views import View
-
-from users.models import User
-from workspaces.models import Workspace
-
+from users.auth import Auth
 from .models import SubTask, Task
+from .serializer import SubTaskSerailizer, TaskSerailizer
+from workspaces.models import UserWorkspaceRole
+
+User = get_user_model()
 
 
-class TaskView(View):
-    def get(self, request, task_id=None):
-        if task_id:
-            task = get_object_or_404(Task, id=task_id)
-            data = {
-                "id": task.id,
-                "title": task.title,
-                "description": task.description,
-                "status": task.status,
-                "estimated_time": task.estimated_time,
-                "actual_time": task.actual_time,
-                "due_date": task.due_date,
-                "priority": task.priority,
-                "workspace": task.workspace.id,
-                "assignee": task.assignee.id if task.assignee else None,
-                "created_at": task.created_at,
-                "updated_at": task.updated_at,
-                "image_url": task.image_url,
-            }
+class TaskViewSet(ModelViewSet):
+    queryset = Task.objects.all()
+    serializer_class = TaskSerailizer
+    authentication_classes = [Auth]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        user_workspace_roles = UserWorkspaceRole.objects.filter(user=user)
+        workspace_ids = user_workspace_roles.values_list('workspace_id', flat=True)
+        return Task.objects.filter(workspace_id__in=workspace_ids)
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        workspace = serializer.validated_data['workspace']
+        user_role = UserWorkspaceRole.objects.filter(user=user, workspace=workspace).first()
+
+        if user_role and user_role.role == 'Admin':
+            serializer.save()
         else:
-            tasks = Task.objects.all()
-            data = [
-                {
-                    "id": task.id,
-                    "title": task.title,
-                    "description": task.description,
-                    "status": task.status,
-                    "estimated_time": task.estimated_time,
-                    "actual_time": task.actual_time,
-                    "due_date": task.due_date,
-                    "priority": task.priority,
-                    "workspace": task.workspace.id,
-                    "assignee": task.assignee.id if task.assignee else None,
-                    "created_at": task.created_at,
-                    "updated_at": task.updated_at,
-                    "image_url": task.image_url,
-                }
-                for task in tasks
-            ]
-        return JsonResponse(data, safe=False)
+            raise PermissionError("You do not have permission to create tasks in this workspace.")
 
-    def post(self, request):
-        data = json.loads(request.body)
-        workspace = get_object_or_404(Workspace, id=data["workspace"])
-        assignee = (
-            get_object_or_404(User, id=data["assignee"])
-            if data.get("assignee")
-            else None
-        )
-        task = Task.objects.create(
-            title=data["title"],
-            description=data.get("description"),
-            status=data["status"],
-            estimated_time=data.get("estimated_time"),
-            actual_time=data.get("actual_time"),
-            due_date=data.get("due_date"),
-            priority=data["priority"],
-            workspace=workspace,
-            assignee=assignee,
-            image_url=data.get("image_url"),
-        )
-        return JsonResponse(
-            {
-                "id": task.id,
-                "title": task.title,
-                "description": task.description,
-                "status": task.status,
-                "estimated_time": task.estimated_time,
-                "actual_time": task.actual_time,
-                "due_date": task.due_date,
-                "priority": task.priority,
-                "workspace": task.workspace.id,
-                "assignee": task.assignee.id if task.assignee else None,
-                "created_at": task.created_at,
-                "updated_at": task.updated_at,
-                "image_url": task.image_url,
-            }
-        )
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        user_role = UserWorkspaceRole.objects.filter(user=request.user, workspace=instance.workspace).first()
 
-    def put(self, request, task_id):
-        data = json.loads(request.body)
-        task = get_object_or_404(Task, id=task_id)
-        task.title = data.get("title", task.title)
-        task.description = data.get("description", task.description)
-        task.status = data.get("status", task.status)
-        task.estimated_time = data.get("estimated_time", task.estimated_time)
-        task.actual_time = data.get("actual_time", task.actual_time)
-        task.due_date = data.get("due_date", task.due_date)
-        task.priority = data.get("priority", task.priority)
-        if "workspace" in data:
-            task.workspace = get_object_or_404(Workspace, id=data["workspace"])
-        if "assignee" in data:
-            task.assignee = get_object_or_404(User, id=data["assignee"])
-        task.image_url = data.get("image_url", task.image_url)
-        task.save()
-        return JsonResponse(
-            {
-                "id": task.id,
-                "title": task.title,
-                "description": task.description,
-                "status": task.status,
-                "estimated_time": task.estimated_time,
-                "actual_time": task.actual_time,
-                "due_date": task.due_date,
-                "priority": task.priority,
-                "workspace": task.workspace.id,
-                "assignee": task.assignee.id if task.assignee else None,
-                "created_at": task.created_at,
-                "updated_at": task.updated_at,
-                "image_url": task.image_url,
-            }
-        )
-
-    def delete(self, request, task_id):
-        task = get_object_or_404(Task, id=task_id)
-        task.delete()
-        return HttpResponse(status=204)
-
-
-class SubTaskView(View):
-    def get(self, request, subtask_id=None):
-        if subtask_id:
-            subtask = get_object_or_404(SubTask, id=subtask_id)
-            data = {
-                "id": subtask.id,
-                "title": subtask.title,
-                "is_completed": subtask.is_completed,
-                "task": subtask.task.id,
-                "assignee": subtask.assignee.id if subtask.assignee else None,
-                "created_at": subtask.created_at,
-                "updated_at": subtask.updated_at,
-            }
+        if user_role and user_role.role == 'Admin':
+            return super().update(request, *args, **kwargs)
         else:
-            subtasks = SubTask.objects.all()
-            data = [
-                {
-                    "id": subtask.id,
-                    "title": subtask.title,
-                    "is_completed": subtask.is_completed,
-                    "task": subtask.task.id,
-                    "assignee": subtask.assignee.id if subtask.assignee else None,
-                    "created_at": subtask.created_at,
-                    "updated_at": subtask.updated_at,
-                }
-                for subtask in subtasks
-            ]
-        return JsonResponse(data, safe=False)
+            return Response(
+                {"detail": "You do not have permission to update this task."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
-    def post(self, request):
-        data = json.loads(request.body)
-        task = get_object_or_404(Task, id=data["task"])
-        assignee = (
-            get_object_or_404(User, id=data["assignee"])
-            if data.get("assignee")
-            else None
-        )
-        subtask = SubTask.objects.create(
-            title=data["title"],
-            is_completed=data.get("is_completed", False),
-            task=task,
-            assignee=assignee,
-        )
-        return JsonResponse(
-            {
-                "id": subtask.id,
-                "title": subtask.title,
-                "is_completed": subtask.is_completed,
-                "task": subtask.task.id,
-                "assignee": subtask.assignee.id if subtask.assignee else None,
-                "created_at": subtask.created_at,
-                "updated_at": subtask.updated_at,
-            }
-        )
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        user_role = UserWorkspaceRole.objects.filter(user=request.user, workspace=instance.workspace).first()
 
-    def put(self, request, subtask_id):
-        data = json.loads(request.body)
-        subtask = get_object_or_404(SubTask, id=subtask_id)
-        subtask.title = data.get("title", subtask.title)
-        subtask.is_completed = data.get("is_completed", subtask.is_completed)
-        if "task" in data:
-            subtask.task = get_object_or_404(Task, id=data["task"])
-        if "assignee" in data:
-            subtask.assignee = get_object_or_404(User, id=data["assignee"])
-        subtask.save()
-        return JsonResponse(
-            {
-                "id": subtask.id,
-                "title": subtask.title,
-                "is_completed": subtask.is_completed,
-                "task": subtask.task.id,
-                "assignee": subtask.assignee.id if subtask.assignee else None,
-                "created_at": subtask.created_at,
-                "updated_at": subtask.updated_at,
-            }
-        )
+        if user_role and user_role.role == 'Admin':
+            return super().destroy(request, *args, **kwargs)
+        else:
+            return Response(
+                {"detail": "You do not have permission to delete this task."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
-    def delete(self, request, subtask_id):
-        subtask = get_object_or_404(SubTask, id=subtask_id)
-        subtask.delete()
-        return HttpResponse(status=204)
+
+class SubTaskViewSet(ModelViewSet):
+    queryset = SubTask.objects.all()
+    serializer_class = SubTaskSerailizer
+    authentication_classes = [Auth]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        user_workspace_roles = UserWorkspaceRole.objects.filter(user=user)
+        workspace_ids = user_workspace_roles.values_list('workspace_id', flat=True)
+        task_ids = Task.objects.filter(workspace_id__in=workspace_ids).values_list('id', flat=True)
+        return SubTask.objects.filter(task_id__in=task_ids)
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        task = serializer.validated_data['task']
+        user_role = UserWorkspaceRole.objects.filter(user=user, workspace=task.workspace).first()
+
+        if user_role and user_role.role == 'Admin':
+            serializer.save()
+        else:
+            raise PermissionError("You do not have permission to create subtasks in this workspace.")
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        user_role = UserWorkspaceRole.objects.filter(user=request.user, workspace=instance.task.workspace).first()
+
+        if user_role and user_role.role == 'Admin':
+            return super().update(request, *args, **kwargs)
+        else:
+            return Response(
+                {"detail": "You do not have permission to update this subtask."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        user_role = UserWorkspaceRole.objects.filter(user=request.user, workspace=instance.task.workspace).first()
+
+        if user_role and user_role.role == 'Admin':
+            return super().destroy(request, *args, **kwargs)
+        else:
+            return Response(
+                {"detail": "You do not have permission to delete this subtask."},
+                status=status.HTTP_403_FORBIDDEN
+            )
