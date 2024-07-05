@@ -1,19 +1,21 @@
+from urllib import request
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-
+from django.contrib.auth import get_user_model
 from users.auth import Auth
 
 from .models import Workspace, UserWorkspaceRole
 from .serializer import WorkspaceSerailizer
 
+User = get_user_model()
 class WorkSpaceViewSet(ModelViewSet):
     queryset = Workspace.objects.all()
     serializer_class = WorkspaceSerailizer
     authentication_classes = [Auth]
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         # Filter workspaces where the user has a role assigned
@@ -26,7 +28,7 @@ class WorkSpaceViewSet(ModelViewSet):
         # Ensure that the user creating the workspace is set as Admin
         workspace = serializer.save()
         UserWorkspaceRole.objects.create(
-            user=self.request.user,
+            user=self.request.user if isinstance(self.request.user,User) else User.objects.get(id=self.request.user),
             workspace=workspace,
             role='Admin'
         )
