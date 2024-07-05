@@ -16,7 +16,7 @@ class TaskViewSet(ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerailizer
     authentication_classes = [Auth]
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
@@ -63,7 +63,7 @@ class SubTaskViewSet(ModelViewSet):
     queryset = SubTask.objects.all()
     serializer_class = SubTaskSerailizer
     authentication_classes = [Auth]
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user

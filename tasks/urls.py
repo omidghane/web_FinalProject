@@ -4,6 +4,6 @@ from .views import SubTaskViewSet, TaskViewSet
 
 router = DefaultRouter()
 
-router.register("tasks", TaskViewSet, basename="tasks")
-router.register("subtasks", SubTaskViewSet, basename="subtasks")
+router.register("", TaskViewSet, basename="tasks")
+router.register("sub", SubTaskViewSet, basename="subtasks")
 urlpatterns = router.urls

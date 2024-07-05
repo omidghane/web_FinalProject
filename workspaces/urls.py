@@ -5,5 +5,5 @@ from .views import WorkSpaceViewSet
 
 router = DefaultRouter()
 
-router.register("workspaces", WorkSpaceViewSet, basename="workspaces")
+router.register("", WorkSpaceViewSet, basename="workspaces")
 urlpatterns = router.urls

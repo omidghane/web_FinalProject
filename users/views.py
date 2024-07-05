@@ -31,8 +31,8 @@ class UserViewSet(ModelViewSet):
         methods=["post"],
         url_path="user-logout",
         url_name="user-logout",
-        permission_classes=[],
-        authentication_classes=[],
+        permission_classes=[IsAuthenticated],
+        authentication_classes=[Auth],
     )
     def logout(self, request: Request):
         try:
