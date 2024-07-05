@@ -10,14 +10,15 @@ class TaskSerailizer(ModelSerializer):
     class Meta:
         model = Task
         fields = "__all__"
-        
+
     def to_representation(self, instance: Task):
-        result =  super().to_representation(instance)
-        result['workspace'] = WorkspaceSerailizer(instance.workspace).data
+        result = super().to_representation(instance)
+        result["workspace"] = WorkspaceSerailizer(instance.workspace).data
         return result
 
 
 class SubTaskSerailizer(ModelSerializer):
+    task = TaskSerailizer
 
     class Meta:
         model = SubTask
